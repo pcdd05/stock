@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dna.persistence.repository.stock.StockRepository">
+
+	<!-- 匯入List<dailyInfo> -->
+	<insert id="insertDailyInfoList" parameterType="map">
+		<if test="DATALIST != null">
+			INSERT ALL
+			<foreach item="item" index="index" collection="DATALIST">
+			INTO ${TBLNAME} 
+			(TRANSACTIONDATE, STOCKNO, STOCKNAME,STARTPRICE,MAXPRICE, MINPRICE, ENDPRICE, ORDERNUM)
+			VALUES
+			(
+				#{item.transactionDate}, 
+				#{item.stockNo},
+				#{item.stockName},
+				#{item.startPrice},
+				#{item.maxPrice},
+				#{item.minPrice},
+				#{item.endPrice}, 
+				#{item.orderNum}
+			)
+			</foreach>
+			SELECT * FROM dual
+		</if>
+	</insert>
+
+	<!-- 匯入List<CalendarDayInfo> -->
+	<insert id="insertHolidayCalendar" parameterType="map">
+		<if test="DATALIST != null">
+			INSERT ALL
+			<foreach item="item" index="index" collection="DATALIST">
+				INTO ${TBLNAME}
+				(CDATE, CNAME, ISHOLIDAY, HOLIDAYCATEGORY, DESCRIPTION)
+				VALUES
+				(
+				#{item.date},
+				#{item.name},
+				#{item.isHoliday},
+				#{item.holidayCategory},
+				#{item.description}
+				)
+			</foreach>
+			SELECT * FROM dual
+		</if>
+	</insert>
+
+	<!-- 取得當日日期九日內資料-For Today Use -->
+	<select id="get9daysInfosFromToday" resultType="dna.rest.pojo.DailyInfo" parameterType="map">
+		SELECT t.* FROM (
+			SELECT * FROM ${TBLNAME} WHERE TRANSACTIONDATE <![CDATA[ >= ]]> add_months(TRUNC(sysdate),-1) ORDER BY TRANSACTIONDATE desc
+		) t WHERE ROWNUM <![CDATA[ <= ]]> 9
+	</select>
+	
+	<!-- 取得特定日期九日內資料-For Specific Date Use -->
+	<select id="get9daysInfosFromDate" resultType="dna.rest.pojo.DailyInfo" parameterType="map">
+		SELECT t.* FROM (
+			SELECT * FROM ${TBLNAME} WHERE TRANSACTIONDATE <![CDATA[ <= ]]> TO_DATE(#{TRANSACTIONDATE},'YYYY-MM-DD') ORDER BY TRANSACTIONDATE desc
+		) t WHERE ROWNUM <![CDATA[ <= ]]> 9
+	</select>
+	
+	<!-- 更新dailyInfo KD值  -->
+	<update id="updateKDValue" parameterType="map">
+		UPDATE ${TBLNAME}
+		SET KVALUE = #{KVALUE}, DVALUE = #{DVALUE}
+		<if test="RSVVALUE != null">
+			, RSVVALUE = #{RSVVALUE}
+		</if>
+		<if test="KDDIFFVALUE != null">
+			, KDDIFFVALUE = #{KDDIFFVALUE}
+		</if>
+		WHERE TRANSACTIONDATE <![CDATA[ = ]]> TO_DATE(#{TRANSACTIONDATE},'YYYY-MM-DD')
+	</update>
+		 
+	<!--  取得單年份資料 -->
+	<select id="get1yearInfos" resultType="dna.rest.pojo.DailyInfo" parameterType="map">
+		SELECT * FROM ${TBLNAME} WHERE TRANSACTIONDATE BETWEEN TO_DATE(#{STARTDATE},'YYYY-MM-DD') AND TO_DATE(#{ENDDATE},'YYYY-MM-DD')
+	</select>
+	
+	<!--  取得今日是否為假日之行事曆資料 -->
+	<select id="getTodayIsHolidayInfo" resultType="dna.rest.pojo.CalendarDayInfo">
+		SELECT * FROM TBLCALENDAR WHERE CDATE = TRUNC(sysdate)
+	</select>
+	
+</mapper>
